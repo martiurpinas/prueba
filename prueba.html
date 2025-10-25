@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Hub</title>
+    <!-- Link to external stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="hero-row">
+                <div>
+                    <div class="logo">Learning Hub</div>
+                    <h1>Learn new skills, one step at a time</h1>
+                    <p class="lead">Short lessons, interactive quizzes, and curated courses for beginners and pros.</p>
+                </div>
+                <div style="margin-left:auto">
+                    <button class="cta" id="openQuizBtn">Try a quick quiz</button>
+                </div>
+            </div>
+            <div class="controls" style="margin-top:14px">
+                <input id="search" class="search" placeholder="Search courses, e.g. JavaScript, Math, UX" />
+                <select id="filter" class="search" style="max-width:200px">
+                    <option value="">All topics</option>
+                    <option>Programming</option>
+                    <option>Math</option>
+                    <option>Design</option>
+                    <option>Science</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section>
+            <h2 style="margin-top:0">Featured courses</h2>
+            <div id="courses" class="grid" aria-live="polite">
+                <!-- course cards rendered by JS -->
+            </div>
+        </section>
+
+        <section style="margin-top:22px">
+            <h2>Popular topics</h2>
+            <div class="topics" style="margin-top:10px">
+                <div class="tag">JavaScript</div>
+                <div class="tag">Algebra</div>
+                <div class="tag">UX</div>
+                <div class="tag">Physics</div>
+                <div class="tag">Data</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        Learning Hub — small demo site • Built for learning purposes
+    </footer>
+
+    <!-- Quiz modal -->
+    <div id="quizModal" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-card" role="document">
+            <div id="quizContent">
+                <!-- populated by JS -->
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+                <button id="closeQuiz" class="cta" style="background:#f1f4ff;color:var(--accent)">Close</button>
+                <button id="nextBtn" class="cta" style="display:none">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course details modal -->
+    <div id="detailsModal" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-card" role="document">
+            <div id="detailsContent"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+                <button id="closeDetails" class="cta" style="background:#f1f4ff;color:var(--accent)">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lesson modal (simple lesson "player") -->
+    <div id="lessonModal" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-card" role="document">
+            <div id="lessonContent"></div>
+            <div style="display:flex;justify-content:space-between;gap:8px;margin-top:12px">
+                <div id="lessonProgress" class="small" aria-live="polite"></div>
+                <div style="display:flex;gap:8px">
+                    <button id="closeLesson" class="cta" style="background:#f1f4ff;color:var(--accent)">Close</button>
+                    <button id="completeLesson" class="cta" style="display:none">Mark complete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Minimal interactive behavior: courses, search/filter, and a tiny quiz
+        const coursesEl = document.getElementById('courses');
+        const searchInput = document.getElementById('search');
+        const filterSelect = document.getElementById('filter');
+
+        const courses = [
+            { id:1, title:'Intro to JavaScript', topic:'Programming', length:'3h', desc:'Basics: variables, functions, DOM' },
+            { id:2, title:'Algebra Essentials', topic:'Math', length:'2h', desc:'Equations, factoring, graphs' },
+            { id:3, title:'UX Fundamentals', topic:'Design', length:'2.5h', desc:'User research and interfaces' },
+            { id:4, title:'Physics: Motion', topic:'Science', length:'3h', desc:'Kinematics and forces' }
+        ];
+
+        // Replace renderCourses with enhanced version (adds tags)
+        function renderCourses(list){
+            coursesEl.innerHTML = '';
+            if(!list.length){
+                coursesEl.innerHTML = '<div class="small">No courses found.</div>';
+                return;
+            }
+            list.forEach(c=>{
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <h3>${c.title}</h3>
+                    <div class="meta">${c.topic} • ${c.length}</div>
+                    <div style="margin-bottom:10px">${c.desc}</div>
+                    <div class="topics" style="margin-bottom:10px">
+                        <div class="tag" data-tag="${c.topic}">${c.topic}</div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <button class="cta" data-action="start" data-id="${c.id}">Start</button>
+                        <button class="small" data-action="details" data-id="${c.id}" style="border:0;background:transparent;color:var(--muted);cursor:pointer">Details</button>
+                    </div>
+                `;
+                coursesEl.appendChild(card);
+            });
+        }
+
+        function applyFilters(){
+            const q = searchInput.value.trim().toLowerCase();
+            const f = filterSelect.value;
+            const filtered = courses.filter(c=>{
+                const matchQ = q === '' || (c.title + ' ' + c.desc + ' ' + c.topic).toLowerCase().includes(q);
+                const matchF = !f || c.topic === f;
+                return matchQ && matchF;
+            });
+            renderCourses(filtered);
+        }
+
+        searchInput.addEventListener('input', applyFilters);
+        filterSelect.addEventListener('change', applyFilters);
+
+        // Initial render
+        renderCourses(courses);
+
+        // Simple quiz logic
+        const quizBtn = document.getElementById('openQuizBtn');
+        const quizModal = document.getElementById('quizModal');
+        const quizContent = document.getElementById('quizContent');
+        const closeQuiz = document.getElementById('closeQuiz');
+        const nextBtn = document.getElementById('nextBtn');
+
+        const quiz = [
+            {
+                q: 'Which is a JavaScript data type?',
+                options: ['String', 'Triangle', 'Rectangle', 'Cup'],
+                answer: 0
+            },
+            {
+                q: 'What is 5 × 6?',
+                options: ['11','30','56','65'],
+                answer: 1
+            }
+        ];
+        let qi = 0, selected = null, score = 0;
+
+        function openQuiz(){
+            qi = 0; score = 0; selected = null;
+            quizModal.classList.add('open');
+            quizModal.setAttribute('aria-hidden','false');
+            showQuestion();
+        }
+        function closeModal(){
+            quizModal.classList.remove('open');
+            quizModal.setAttribute('aria-hidden','true');
+        }
+        function showQuestion(){
+            const item = quiz[qi];
+            quizContent.innerHTML = `
+                <div class="quiz-q">${item.q}</div>
+                <div class="options">
+                    ${item.options.map((o,i)=>`<div class="opt" data-i="${i}">${o}</div>`).join('')}
+                </div>
+                <div class="small">Question ${qi+1} of ${quiz.length}</div>
+            `;
+            selected = null;
+            nextBtn.style.display = 'none';
+            Array.from(quizContent.querySelectorAll('.opt')).forEach(opt=>{
+                opt.addEventListener('click', ()=>{
+                    Array.from(quizContent.querySelectorAll('.opt')).forEach(x=>x.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    selected = Number(opt.dataset.i);
+                    nextBtn.style.display = 'inline-block';
+                });
+            });
+        }
+        function next(){
+            if(selected === quiz[qi].answer) score++;
+            qi++;
+            if(qi < quiz.length) showQuestion();
+            else showResult();
+        }
+        function showResult(){
+            quizContent.innerHTML = `
+                <div style="font-weight:700;font-size:1.1rem">Your score: ${score} / ${quiz.length}</div>
+                <div style="margin-top:8px" class="small">Thanks for trying the quick quiz. Try more courses to learn in depth.</div>
+            `;
+            nextBtn.style.display = 'none';
+        }
+
+        quizBtn.addEventListener('click', openQuiz);
+        closeQuiz.addEventListener('click', closeModal);
+        nextBtn.addEventListener('click', next);
+
+        // Close modal when clicking outside content
+        quizModal.addEventListener('click', (e)=>{
+            if(e.target === quizModal) closeModal();
+        });
+
+        // Keyboard accessibility: Esc to close
+        document.addEventListener('keydown', (e)=>{
+            if(e.key === 'Escape') closeModal();
+        });
+
+        // Event delegation for course actions and tag clicks
+        coursesEl.addEventListener('click', (e)=>{
+            const btn = e.target.closest('[data-action]');
+            if(btn){
+                const id = Number(btn.dataset.id);
+                const action = btn.dataset.action;
+                const course = courses.find(x=>x.id === id);
+                if(!course) return;
+                if(action === 'start') openLesson(course);
+                if(action === 'details') openDetails(course);
+            }
+            const tag = e.target.closest('.tag[data-tag]');
+            if(tag){
+                filterSelect.value = tag.dataset.tag;
+                applyFilters();
+            }
+        });
+
+        // Details modal functions
+        const detailsModal = document.getElementById('detailsModal');
+        const detailsContent = document.getElementById('detailsContent');
+        const closeDetails = document.getElementById('closeDetails');
+
+        function openDetails(course){
+            detailsContent.innerHTML = `
+                <h3>${course.title}</h3>
+                <div class="meta">${course.topic} • ${course.length}</div>
+                <p>${course.desc}</p>
+                <div style="margin-top:10px" class="small">Click the Start button on the card to begin the lesson.</div>
+            `;
+            detailsModal.classList.add('open');
+            detailsModal.setAttribute('aria-hidden','false');
+        }
+        closeDetails.addEventListener('click', ()=> {
+            detailsModal.classList.remove('open');
+            detailsModal.setAttribute('aria-hidden','true');
+        });
+        detailsModal.addEventListener('click', (e)=>{ if(e.target === detailsModal) { detailsModal.classList.remove('open'); detailsModal.setAttribute('aria-hidden','true'); }});
+
+        // Lesson modal and progress (localStorage)
+        const lessonModal = document.getElementById('lessonModal');
+        const lessonContent = document.getElementById('lessonContent');
+        const lessonProgress = document.getElementById('lessonProgress');
+        const closeLesson = document.getElementById('closeLesson');
+        const completeLesson = document.getElementById('completeLesson');
+
+        const PROG_KEY = 'lh_progress';
+        function loadProgress(){ try{ return JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); }catch(e){return {};}}
+        function saveProgress(p){ localStorage.setItem(PROG_KEY, JSON.stringify(p)); }
+
+        function openLesson(course){
+            const progress = loadProgress();
+            const completed = progress[course.id] === true;
+            lessonContent.innerHTML = `
+                <h3>${course.title}</h3>
+                <div class="meta">${course.topic} • ${course.length}</div>
+                <div style="margin-top:10px">
+                    <p class="small">Lesson preview: this is a tiny lesson. Read, try, and mark complete to track progress.</p>
+                    <ol>
+                        <li class="small">Overview & key concepts</li>
+                        <li class="small">Short example</li>
+                        <li class="small">Try the exercises in the course</li>
+                    </ol>
+                </div>
+            `;
+            lessonProgress.textContent = completed ? 'Status: completed' : 'Status: in progress';
+            completeLesson.style.display = completed ? 'none' : 'inline-block';
+            lessonModal.classList.add('open');
+            lessonModal.setAttribute('aria-hidden','false');
+        }
+
+        completeLesson.addEventListener('click', ()=>{
+            // mark current visible course as complete
+            const title = lessonContent.querySelector('h3')?.textContent;
+            const course = courses.find(c=>c.title === title);
+            if(!course) return;
+            const p = loadProgress();
+            p[course.id] = true;
+            saveProgress(p);
+            lessonProgress.textContent = 'Status: completed';
+            completeLesson.style.display = 'none';
+            // visual small ack
+            alert('Course marked complete. Progress saved locally.');
+        });
+
+        closeLesson.addEventListener('click', ()=>{
+            lessonModal.classList.remove('open');
+            lessonModal.setAttribute('aria-hidden','true');
+        });
+        lessonModal.addEventListener('click', (e)=>{ if(e.target === lessonModal) { lessonModal.classList.remove('open'); lessonModal.setAttribute('aria-hidden','true'); }});
+
+        // show progress badges on load
+        function applyProgressBadges(){
+            const p = loadProgress();
+            // small pass: re-render and then annotate cards with completed badge
+            const allCards = coursesEl.querySelectorAll('.card');
+            allCards.forEach(card=>{
+                const title = card.querySelector('h3')?.textContent;
+                const course = courses.find(c=>c.title === title);
+                if(course && p[course.id]){
+                    if(!card.querySelector('.badge')) {
+                        const b = document.createElement('span');
+                        b.className = 'badge';
+                        b.textContent = '✓ completed';
+                        b.style.marginLeft = '8px';
+                        b.style.fontSize = '0.8rem';
+                        b.style.color = 'green';
+                        card.querySelector('h3').appendChild(b);
+                    }
+                }
+            });
+        }
+
+        // Enhance applyFilters to update badges after rendering
+        const originalApply = applyFilters;
+        function applyFilters(){
+            originalApply();
+            // short delay to ensure DOM updated
+            setTimeout(applyProgressBadges, 10);
+        }
+
+        // Call once after initial render
+        applyProgressBadges();
+    </script>
+</body>
+</html>
